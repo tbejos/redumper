@@ -242,7 +242,7 @@ void print_ss_structure(const READ_DVD_STRUCTURE_LayerDescriptor &layer_descript
     LOG("{}layer {} {{ {} }}", std::string(2, ' '), 0, types);
     LOG("{}data {{ LBA: [{} .. {}], length: {}, hLBA: [0x{:06X} .. 0x{:06X}] }}", indent, lba_first, lba_last, layer0_size, lba_first_raw, lba_last_raw);
     if(layer0_last)
-        LOG("{}data layer 0 last {{ LBA: {}, hLBA: 0x{:06X} }}", indent, ss_layer0_last, layer0_last_raw);
+        LOG("{}data layer 0 last {{ LBA: {}, hLBA: 0x{:06X} }}", indent, layer0_last, layer0_last_raw);
     LOG("{}book type: {}", indent, BOOK_TYPE[layer_descriptor.book_type]);
     LOG("{}part version: {}", indent, layer_descriptor.part_version);
     if(layer_descriptor.disc_size < 2)
