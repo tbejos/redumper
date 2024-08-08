@@ -233,8 +233,8 @@ void print_ss_structure(const READ_DVD_STRUCTURE_LayerDescriptor &layer_descript
     uint32_t lba_last_raw = endian_swap(pfi_layer_descriptor.data_end_sector);
     uint32_t layer0_last_raw = endian_swap(layer_descriptor.layer0_end_sector);
 
-    uint32_t lba_first = sign_extend<24>(pfi_lba_first_raw);
-    uint32_t lba_last = sign_extend<24>(pfi_lba_last_raw);
+    uint32_t lba_first = sign_extend<24>(lba_first_raw);
+    uint32_t lba_last = sign_extend<24>(lba_last_raw);
     uint32_t layer0_last = sign_extend<24>(layer0_last_raw);
 
     uint32_t layer0_size = layer0_last - lba_first + 1;
