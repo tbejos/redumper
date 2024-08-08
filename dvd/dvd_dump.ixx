@@ -215,6 +215,48 @@ void print_physical_structure(const READ_DVD_STRUCTURE_LayerDescriptor &layer_de
 }
 
 
+void print_ss_structure(const READ_DVD_STRUCTURE_LayerDescriptor &layer_descriptor, const READ_DVD_STRUCTURE_LayerDescriptor &pfi_layer_descriptor)
+{
+    std::string types;
+    if(layer_descriptor.layer_type & (uint8_t)LayerType::EMBOSSED)
+        types += std::string(types.empty() ? "" : ", ") + "embossed";
+    if(layer_descriptor.layer_type & (uint8_t)LayerType::RECORDABLE)
+        types += std::string(types.empty() ? "" : ", ") + "recordable";
+    if(layer_descriptor.layer_type & (uint8_t)LayerType::REWRITABLE)
+        types += std::string(types.empty() ? "" : ", ") + "rewritable";
+    if(layer_descriptor.layer_type & (uint8_t)LayerType::RESERVED)
+        types += std::string(types.empty() ? "" : ", ") + "reserved";
+
+    std::string indent(4, ' ');
+
+    uint32_t lba_first_raw = endian_swap(pfi_layer_descriptor.data_start_sector);
+    uint32_t lba_last_raw = endian_swap(pfi_layer_descriptor.data_end_sector);
+    uint32_t layer0_last_raw = endian_swap(layer_descriptor.layer0_end_sector);
+
+    uint32_t lba_first = sign_extend<24>(pfi_lba_first_raw);
+    uint32_t lba_last = sign_extend<24>(pfi_lba_last_raw);
+    uint32_t layer0_last = sign_extend<24>(layer0_last_raw);
+
+    uint32_t layer0_size = layer0_last - lba_first + 1;
+
+    LOG("{}layer {} {{ {} }}", std::string(2, ' '), 0, types);
+    LOG("{}data {{ LBA: [{} .. {}], length: {}, hLBA: [0x{:06X} .. 0x{:06X}] }}", indent, lba_first, lba_last, layer0_size, lba_first_raw, lba_last_raw);
+    if(layer0_last)
+        LOG("{}data layer 0 last {{ LBA: {}, hLBA: 0x{:06X} }}", indent, ss_layer0_last, layer0_last_raw);
+    LOG("{}book type: {}", indent, BOOK_TYPE[layer_descriptor.book_type]);
+    LOG("{}part version: {}", indent, layer_descriptor.part_version);
+    if(layer_descriptor.disc_size < 2)
+        LOG("{}disc size: {}", indent, layer_descriptor.disc_size ? "80mm" : "120mm");
+    LOG("{}maximum rate: {}", indent, MAXIMUM_RATE[layer_descriptor.maximum_rate]);
+    LOG("{}layers count: {}", indent, layer_descriptor.layers_number + 1);
+    LOG("{}track path: {}", indent, layer_descriptor.track_path ? "opposite" : "parallel");
+    LOG("{}linear density: {}", indent, LINEAR_DENSITY[layer_descriptor.linear_density]);
+    LOG("{}track density: {}", indent, TRACK_DENSITY[layer_descriptor.track_density]);
+    LOG("{}BCA: {}", indent, layer_descriptor.bca ? "yes" : "no");
+}
+
+
+
 void print_di_units_structure(const uint8_t *di_units, bool rom)
 {
     std::string indent(4, ' ');
@@ -554,7 +596,7 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                 sectors_count = sector_last + 1;
 
                 LOG("disc structure:");
-                print_physical_structure(*ss_layer_descriptor, 0);
+                print_ss_structure(*ss_layer_descriptor, *layer_descriptor);
                 LOG("");
 
                 uint32_t xbox_layer0_last = sign_extend<24>(endian_swap(ss_layer_descriptor->layer0_end_sector));
