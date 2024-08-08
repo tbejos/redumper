@@ -596,7 +596,7 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                 sectors_count = sector_last + 1;
 
                 LOG("disc structure:");
-                print_ss_structure(*ss_layer_descriptor, *layer_descriptor);
+                print_ss_structure(*ss_layer_descriptor, layer_descriptor);
                 LOG("");
 
                 uint32_t xbox_layer0_last = sign_extend<24>(endian_swap(ss_layer_descriptor->layer0_end_sector));
