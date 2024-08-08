@@ -11,7 +11,7 @@ namespace gpsxre
 
 export enum class XGD_Type : uint8_t
 {
-    UNKNOWN,
+    NONE,
     XGD1,
     XGD2,
     XGD3
@@ -19,8 +19,9 @@ export enum class XGD_Type : uint8_t
 
 export XGD_Type get_xgd_type(std::vector<uint8_t> &ss)
 {
+    // TODO: Further validation on SS
     if(ss.size() != 2048)
-        return XGD_Type::UNKNOWN;
+        return XGD_Type::NONE;
 
     // Concatenate the last three values
     uint32_t xgd_type = ((uint32_t)ss[13] << 16) | ((uint32_t)ss[14] << 8) | ss[15];
@@ -35,7 +36,7 @@ export XGD_Type get_xgd_type(std::vector<uint8_t> &ss)
     case 0x238E0F:
         return XGD_Type::XGD3;
     default:
-        return XGD_Type::UNKNOWN;
+        return XGD_Type::NONE;
     }
 }
 
