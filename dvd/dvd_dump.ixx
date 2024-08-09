@@ -474,7 +474,7 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                     std::vector<uint8_t> security_sectors(0x800);
 
                     // keep retrying get security sectors
-                    for(uint32_t i = 0; ; i++)
+                    for(uint32_t i = 0;; i++)
                     {
                         status = cmd_kreon_get_security_sectors(*ctx.sptd, security_sectors);
                         if(!status.status_code)
