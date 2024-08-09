@@ -233,9 +233,9 @@ void print_ss_structure(const READ_DVD_STRUCTURE_LayerDescriptor &layer_descript
     uint32_t lba_last_raw = endian_swap(pfi_layer_descriptor.data_end_sector);
     uint32_t layer0_last_raw = endian_swap(layer_descriptor.layer0_end_sector);
 
-    uint32_t lba_first = sign_extend<24>(lba_first_raw);
-    uint32_t lba_last = sign_extend<24>(lba_last_raw);
-    uint32_t layer0_last = sign_extend<24>(layer0_last_raw);
+    int32_t lba_first = sign_extend<24>(lba_first_raw);
+    int32_t lba_last = sign_extend<24>(lba_last_raw);
+    int32_t layer0_last = sign_extend<24>(layer0_last_raw);
 
     uint32_t layer0_size = layer0_last - lba_first + 1;
 
@@ -432,7 +432,7 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
 
     XGD_Type xgd_type = XGD_Type::NONE;
     std::vector<std::array<uint32_t, 2>> xbox_ss_ranges;
-    const READ_DVD_STRUCTURE_LayerDescriptor *ss_layer_descriptor = nullptr;
+    READ_DVD_STRUCTURE_LayerDescriptor ss_layer_descriptor;
     uint32_t l1_video_start = 0;
     uint32_t l1_video_end = 0;
 
@@ -472,12 +472,19 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                 if(ctx.drive_config.vendor_specific.starts_with("KREON V1.00"))
                 {
                     std::vector<uint8_t> security_sectors(0x800);
-                    status = cmd_kreon_get_security_sectors(*ctx.sptd, security_sectors);
-                    if(status.status_code)
-                        throw_line("failed to get security sectors, SCSI ({})", SPTD::StatusMessage(status));
+
+                    // keep retrying get security sectors
+                    for(uint32_t i = 0; ; i++)
+                    {
+                        status = cmd_kreon_get_security_sectors(*ctx.sptd, security_sectors);
+                        if(!status.status_code)
+                            break;
+                        else if(i == 15)
+                            throw_line("failed to get security sectors, SCSI ({})", SPTD::StatusMessage(status));
+                    }
 
                     write_vector(image_prefix + ".raw_ss", security_sectors);
-                    ss_layer_descriptor = reinterpret_cast<const READ_DVD_STRUCTURE_LayerDescriptor *>(security_sectors.data());
+                    ss_layer_descriptor = reinterpret_cast<READ_DVD_STRUCTURE_LayerDescriptor>(security_sectors.data());
 
                     // validate SS
                     xgd_type = get_xgd_type(security_sectors);
@@ -576,9 +583,9 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
 
                 auto layer_descriptor = (READ_DVD_STRUCTURE_LayerDescriptor &)structure[sizeof(CMD_ParameterListHeader)];
 
-                uint32_t layer0_last = sign_extend<24>(endian_swap(layer_descriptor.layer0_end_sector));
+                int32_t layer0_last = sign_extend<24>(endian_swap(layer_descriptor.layer0_end_sector));
 
-                uint32_t lba_first = sign_extend<24>(endian_swap(layer_descriptor.data_start_sector));
+                int32_t lba_first = sign_extend<24>(endian_swap(layer_descriptor.data_start_sector));
                 l1_video_start = layer0_last + 1 - lba_first;
                 l1_video_end = get_layer_length(layer_descriptor);
 
@@ -599,7 +606,7 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                 print_ss_structure(*ss_layer_descriptor, layer_descriptor);
                 LOG("");
 
-                uint32_t xbox_layer0_last = sign_extend<24>(endian_swap(ss_layer_descriptor->layer0_end_sector));
+                int32_t xbox_layer0_last = sign_extend<24>(endian_swap(ss_layer_descriptor->layer0_end_sector));
 
                 LOG("layer break: {}", xbox_layer0_last + 1 - lba_first);
                 LOG("");
@@ -653,8 +660,8 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                     // opposite
                     if(layer_descriptor.track_path)
                     {
-                        uint32_t lba_first = sign_extend<24>(endian_swap(layer_descriptor.data_start_sector));
-                        uint32_t layer0_last = sign_extend<24>(endian_swap(layer_descriptor.layer0_end_sector));
+                        int32_t lba_first = sign_extend<24>(endian_swap(layer_descriptor.data_start_sector));
+                        int32_t layer0_last = sign_extend<24>(endian_swap(layer_descriptor.layer0_end_sector));
 
                         layer_break = layer0_last + 1 - lba_first;
                     }
@@ -755,7 +762,7 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                 }
                 else
                 {
-                    // skip at most to the end of the range
+                    // skip at most to the end of the security sector range
                     sectors_to_read = std::min(sectors_to_read, xbox_ss_ranges[ss_range_idx][1] + 1 - s);
                     progress_output(s, sectors_count, errors_scsi);
 
@@ -902,8 +909,8 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
         // write L1 middle/filler padding
         std::vector<uint8_t> zeroes(sectors_at_once * FORM1_DATA_SIZE);
 
-        uint32_t xbox_lba_first = sign_extend<24>(endian_swap(ss_layer_descriptor->data_start_sector));
-        uint32_t xbox_layer0_last = sign_extend<24>(endian_swap(ss_layer_descriptor->layer0_end_sector));
+        int32_t xbox_lba_first = sign_extend<24>(endian_swap(ss_layer_descriptor->data_start_sector));
+        int32_t xbox_layer0_last = sign_extend<24>(endian_swap(ss_layer_descriptor->layer0_end_sector));
 
         uint32_t end_l1_middle = sectors_count + xbox_lba_first - xbox_layer0_last - l1_video_start;
         if(xgd_type == XGD_Type::XGD3)
