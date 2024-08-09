@@ -606,23 +606,23 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                 print_ss_structure(*ss_layer_descriptor, layer_descriptor);
                 LOG("");
 
-                int32_t xbox_layer0_last = sign_extend<24>(endian_swap(ss_layer_descriptor->layer0_end_sector));
+                int32_t xbox_layer0_last = sign_extend<24>(endian_swap(ss_layer_descriptor.layer0_end_sector));
 
                 LOG("layer break: {}", xbox_layer0_last + 1 - lba_first);
                 LOG("");
 
                 // extract security sector ranges
                 bool is_xgd1 = xgd_type == XGD_Type::XGD1;
-                uint8_t num_ss_regions = ss_layer_descriptor->media_specific[1632 - 17];
+                uint8_t num_ss_regions = ss_layer_descriptor.media_specific[1632 - 17];
                 // partial pre-compute of conversion to Layer 1
                 const uint32_t layer1_offset = (xbox_layer0_last * 2) - 0x030000 + 1;
 
                 for(int ss_pos = 1633, i = 0; i < num_ss_regions; ss_pos += 9, i++)
                 {
-                    uint32_t start_psn = ((uint32_t)ss_layer_descriptor->media_specific[ss_pos + 3 - 17] << 16) | ((uint32_t)ss_layer_descriptor->media_specific[ss_pos + 4 - 17] << 8)
-                                       | (uint32_t)ss_layer_descriptor->media_specific[ss_pos + 5 - 17];
-                    uint32_t end_psn = ((uint32_t)ss_layer_descriptor->media_specific[ss_pos + 6 - 17] << 16) | ((uint32_t)ss_layer_descriptor->media_specific[ss_pos + 7 - 17] << 8)
-                                     | (uint32_t)ss_layer_descriptor->media_specific[ss_pos + 8 - 17];
+                    uint32_t start_psn = ((uint32_t)ss_layer_descriptor.media_specific[ss_pos + 3 - 17] << 16) | ((uint32_t)ss_layer_descriptor.media_specific[ss_pos + 4 - 17] << 8)
+                                       | (uint32_t)ss_layer_descriptor.media_specific[ss_pos + 5 - 17];
+                    uint32_t end_psn = ((uint32_t)ss_layer_descriptor.media_specific[ss_pos + 6 - 17] << 16) | ((uint32_t)ss_layer_descriptor.media_specific[ss_pos + 7 - 17] << 8)
+                                     | (uint32_t)ss_layer_descriptor.media_specific[ss_pos + 8 - 17];
                     if((i < 8 && is_xgd1) || (i == 0 && !is_xgd1))
                     {
                         // Layer 0
@@ -909,8 +909,8 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
         // write L1 middle/filler padding
         std::vector<uint8_t> zeroes(sectors_at_once * FORM1_DATA_SIZE);
 
-        int32_t xbox_lba_first = sign_extend<24>(endian_swap(ss_layer_descriptor->data_start_sector));
-        int32_t xbox_layer0_last = sign_extend<24>(endian_swap(ss_layer_descriptor->layer0_end_sector));
+        int32_t xbox_lba_first = sign_extend<24>(endian_swap(ss_layer_descriptor.data_start_sector));
+        int32_t xbox_layer0_last = sign_extend<24>(endian_swap(ss_layer_descriptor.layer0_end_sector));
 
         uint32_t end_l1_middle = sectors_count + xbox_lba_first - xbox_layer0_last - l1_video_start;
         if(xgd_type == XGD_Type::XGD3)
