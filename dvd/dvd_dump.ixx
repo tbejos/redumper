@@ -443,6 +443,7 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
             }
         }
 
+        uint32_t xbox_layer0_end_sector = 0;
         if(is_xbox)
         {
             std::vector<uint8_t> security_sector(0x800);
@@ -553,7 +554,7 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                 sectors_count += l1_video_length;
 
                 // overwrite physical structure with true layer0_last from SS, so that disc structure logging is correct
-                pfi_layer_descriptor.layer0_end_sector = ss_layer_descriptor.layer0_end_sector;
+                xbox_layer0_end_sector = ss_layer_descriptor.layer0_end_sector;
             }
         }
 
@@ -659,7 +660,13 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                     if(layer_descriptor.track_path)
                     {
                         int32_t lba_first = sign_extend<24>(endian_swap(layer_descriptor.data_start_sector));
-                        int32_t layer0_last = sign_extend<24>(endian_swap(layer_descriptor.layer0_end_sector));
+                        int32_t layer0_last;
+
+                        // overwrite physical structure with true layer0_last from SS, so that disc structure logging is correct
+                        if(is_xbox)
+                            layer0_last = xbox_layer0_end_sector;
+                        else
+                            layer0_last = sign_extend<24>(endian_swap(layer_descriptor.layer0_end_sector));
 
                         layer_break = layer0_last + 1 - lba_first;
                     }
