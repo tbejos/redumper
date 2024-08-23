@@ -2,8 +2,7 @@ name: CMake
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
+    branches: [ kreon_xbox ]
 
 env:
   build_directory: ${{github.workspace}}/BUILD
@@ -82,24 +81,3 @@ jobs:
       with:
         name: ${{env.release_name}}_${{matrix.os}}_${{matrix.platform}}
         path: ${{env.build_directory}}/redumper-*.zip
-
-  release:
-    if: github.event_name != 'pull_request'
-    needs: build
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          merge-multiple: true
-
-      - name: 'Create Release'
-        shell: bash
-        run: |
-          for f in redumper-*.zip; do FILES+=" $f"; done
-          gh release create --generate-notes ${{ env.release_name }} $FILES
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
