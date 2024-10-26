@@ -783,4 +783,18 @@ export struct CDB12_SetCDSpeed
     uint8_t control;
 };
 
+export struct CDB12_0800Command
+{
+    uint8_t operation_code;
+    uint8_t zeroes[3];
+    uint8_t unknown1;
+    uint8_t unknown_c0;
+    uint8_t zero;
+    uint8_t ram_addr[2];
+    uint8_t unknown_49;
+    uint8_t unknown_58;
+    uint8_t control;
+};
+
+
 }

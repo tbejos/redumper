@@ -484,6 +484,19 @@ export SPTD::Status cmd_kreon_set_lock_state(SPTD &sptd, KREON_LockState lock_st
     return sptd.sendCommand(&cdb, sizeof(cdb), nullptr, 0);
 }
 
+export SPTD::Status cmd_0800_toggle_lock_state(SPTD &sptd)
+{
+    // 12 00 00 00 24 C0 00 00 00 49 58 03
+    CDB12_0800Command cdb = {};
+    cdb.operation_code = (uint8_t)CDB_OperationCode::INQUIRY;
+    cdb.unknown1 = 0x24;
+    cdb.unknown_c0 = 0xC0;
+    cdb.unknown_49 = 0x49;
+    cdb.unknown_58 = 0x58;
+    cdb.control = 0x03;
+
+    return sptd.sendCommand(&cdb, sizeof(cdb), nullptr, 0);
+}
 
 export SPTD::Status cmd_start_stop_unit(SPTD &sptd, uint8_t load_eject, uint8_t start)
 {

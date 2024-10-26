@@ -385,6 +385,12 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
         if(status.status_code)
             LOG("warning: failed to unlock Kreon drive, SCSI ({})", SPTD::StatusMessage(status));
     }
+    else if(ctx.drive_config.product_id.starts_with("DG-16D2S"))
+    {
+        status = cmd_0800_toggle_lock_state(*ctx.sptd);
+        if(status.status_code)
+            LOG("warning: failed to unlock 0800 drive, SCSI ({})", SPTD::StatusMessage(status));
+    }
 
     // get sectors count
     uint32_t sector_last, block_length;
@@ -433,7 +439,7 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
             if(physical_sectors_count != sectors_count)
             {
                 // Kreon PFI sector count is only for Video portion when XGD present
-                if(ctx.drive_config.vendor_specific.starts_with("KREON V1.00"))
+                if(ctx.drive_config.vendor_specific.starts_with("KREON V1.00") || ctx.drive_config.product_id.starts_with("DG-16D2S"))
                     is_xbox = true;
                 else
                 {
@@ -751,14 +757,14 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
     SignalINT signal;
 
     uint8_t skip_range_idx = 0;
-    bool kreon_locked = false;
+    bool xbox_locked = false;
     for(uint32_t s = 0; s < sectors_count;)
     {
         bool increment = true;
 
         uint32_t sectors_to_read = std::min(sectors_at_once, sectors_count - s);
 
-        if(is_xbox && !kreon_locked)
+        if(is_xbox && !xbox_locked)
         {
             // skip xbox security sector ranges and L1 filler range
             if(skip_range_idx < xbox_skip_ranges.size())
@@ -807,12 +813,16 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
                 sectors_to_read = std::min(sectors_to_read, xbox_lock_sector - s);
             else if(s == xbox_lock_sector)
             {
-                status = cmd_kreon_set_lock_state(*ctx.sptd, KREON_LockState::LOCKED);
+                if(ctx.drive_config.product_id.starts_with("DG-16D2S"))
+                    status = cmd_0800_toggle_lock_state(*ctx.sptd);
+                else
+                    status = cmd_kreon_set_lock_state(*ctx.sptd, KREON_LockState::LOCKED);
+
                 if(status.status_code)
                     throw_line("failed to set lock state, SCSI ({})", SPTD::StatusMessage(status));
                 if(options.verbose)
                     LOG_R("locked kreon drive at sector: {}", s);
-                kreon_locked = true;
+                xbox_locked = true;
             }
         }
 
@@ -841,7 +851,7 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
             std::vector<uint8_t> drive_data(sectors_at_once * FORM1_DATA_SIZE);
 
             uint32_t dump_sector = s;
-            if(kreon_locked)
+            if(xbox_locked)
                 dump_sector -= xbox_l1_video_shift;
 
             status = cmd_read(*ctx.sptd, drive_data.data(), FORM1_DATA_SIZE, dump_sector, sectors_to_read, dump_mode == DumpMode::REFINE && refine_counter);
@@ -945,10 +955,14 @@ export bool redumper_dump_dvd(Context &ctx, const Options &options, DumpMode dum
             s += sectors_to_read;
     }
 
-    if(is_xbox)
+    if(xbox_locked)
     {
         // re-unlock drive before returning
-        status = cmd_kreon_set_lock_state(*ctx.sptd, KREON_LockState::WXRIPPER);
+        if(ctx.drive_config.product_id.starts_with("DG-16D2S"))
+            status = cmd_0800_toggle_lock_state(*ctx.sptd);
+        else
+            status = cmd_kreon_set_lock_state(*ctx.sptd, KREON_LockState::WXRIPPER);
+
         if(status.status_code)
             LOG("warning: failed to unlock drive at end of dump, SCSI ({})", SPTD::StatusMessage(status));
     }
